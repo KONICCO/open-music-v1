@@ -1,18 +1,23 @@
 const { Pool } = require("pg");
 const { nanoid } = require("nanoid");
 const InvariantError = require("../../exceptions/InvariantError");
-const { mapSongDB } = require("../../utils");
 const NotFoundError = require("../../exceptions/NotFoundError");
 class SongsService {
   constructor() {
-    this._pool = new Pool();
+    this._pool = new Pool({
+      user: process.env.PGUSER,
+      host: process.env.PGHOST,
+      database: process.env.PGDATABASE,
+      password: process.env.PGPASSWORD,
+      port: process.env.PGPORT,
+    });
   }
   async addSong({ title, year, performer, genre, duration, albumId }) {
     const id = `song-${nanoid(16)}`;
 
     const query = {
       text: "INSERT INTO songs VALUES($1, $2, $3, $4, $5, $6,$7) RETURNING id",
-      values: [id, title, year, performer, genre, duration, albumId],
+      values: [id, title, year, genre, performer, duration, albumId],
     };
     const result = await this._pool.query(query);
     if (!result.rows[0].id) {
@@ -21,15 +26,42 @@ class SongsService {
 
     return result.rows[0].id;
   }
-  async getSongs() {
-    const result = await this._pool.query(
-      "SELECT id, title, performer FROM songs"
-    );
-    return result.rows.map(mapSongDB);
+  async getSongs(req) {
+    const { title, performer } = req;
+
+    let baseQuery = "SELECT id, title, performer FROM songs";
+    const queryParams = [];
+    const conditions = [];
+
+    
+    if (title) {
+      conditions.push(`title ILIKE $${queryParams.length + 1}`);
+      queryParams.push(`%${title}%`);
+    }
+
+    
+    if (performer) {
+      conditions.push(`performer ILIKE $${queryParams.length + 1}`);
+      queryParams.push(`%${performer}%`);
+    }
+
+    
+    if (conditions.length > 0) {
+      baseQuery += " WHERE " + conditions.join(" AND ");
+    }
+
+    try {
+      console.log("Executing query:", baseQuery, queryParams); // Debug query
+      const result = await this._pool.query(baseQuery, queryParams);
+      return result.rows;
+    } catch (error) {
+      console.error("Database query failed:", error); // Log error database
+      throw new Error("Gagal mengambil data dari database");
+    }
   }
   async getSongById(id) {
     const query = {
-      text: "SELECT  * FROM songs WHERE id = $1",
+      text: "SELECT * FROM songs WHERE id = $1",
       values: [id],
     };
     const result = await this._pool.query(query);

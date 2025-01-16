@@ -4,10 +4,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start:dev": "nodemon ./src/server.js",
+    "start": "nodemon ./src/server.js",
     "migrate": "node-pg-migrate",
     "lint": "eslint ./src"
-
   },
   "keywords": [],
   "author": "nico wibiyanto",
@@ -15,9 +14,11 @@
   "description": "proyek 1 openmusic api dicoding",
   "dependencies": {
     "@hapi/hapi": "^21.3.12",
+    "@hapi/jwt": "^3.2.0",
+    "bcrypt": "^5.1.1",
     "dotenv": "^16.4.7",
     "joi": "^17.13.3",
-    "nanoid": "^5.0.9",
+    "nanoid": "^4.0.0",
     "node-pg-migrate": "^7.9.0",
     "nodemon": "^3.1.9",
     "pg": "^8.13.1"

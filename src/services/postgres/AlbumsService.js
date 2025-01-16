@@ -1,11 +1,16 @@
 const { Pool } = require("pg");
 const { nanoid } = require("nanoid");
 const InvariantError = require("../../exceptions/InvariantError");
-// const { mapAlbumsDB } = require("../../utils");
 const NotFoundError = require("../../exceptions/NotFoundError");
 class AlbumsService {
   constructor() {
-    this._pool = new Pool();
+    this._pool = new Pool({
+      user: process.env.PGUSER,
+      host: process.env.PGHOST,
+      database: process.env.PGDATABASE,
+      password: process.env.PGPASSWORD,
+      port: process.env.PGPORT,
+    });
   }
   async addAlbum({ name, year }) {
     const id = `album-${nanoid(16)}`;
@@ -23,26 +28,40 @@ class AlbumsService {
 
   async getAlbumsById(id) {
     const query = {
-      text: "SELECT * FROM albums WHERE id = $1",
+      text: `
+        SELECT albums.id AS album_id, albums.name, albums.year,
+               songs.id AS song_id, songs.title, songs.performer
+        FROM albums
+        LEFT JOIN songs ON albums.id = "songs"."albumId"
+        WHERE albums.id = $1
+      `,
       values: [id],
     };
-    const querySong = {
-      text: 'SELECT songs.id, songs.title, songs.performer FROM songs INNER JOIN albums ON albums.id=songs."albumId" WHERE albums.id=$1',
-      values: [id],
-    };
+
     const result = await this._pool.query(query);
-    const fetchSong = await this._pool.query(querySong);
+
     if (!result.rows.length) {
-      throw new NotFoundError("album tidak ditemukan");
+      throw new NotFoundError("Album tidak ditemukan");
     }
 
+    const { album_id, name, year } = result.rows[0];
+    // detail song
+    const songs = result.rows
+      .filter((row) => row.song_id !== null) 
+      .map((row) => ({
+        id: row.song_id,
+        title: row.title,
+        performer: row.performer,
+      }));
+
     return {
-      id: result.rows[0].id,
-      name: result.rows[0].name,
-      year: result.rows[0].year,
-      songs: fetchSong.rows,
+      id: album_id,
+      name,
+      year,
+      songs,
     };
   }
+
   async editAlbumById(id, { name, year }) {
     const query = {
       text: "UPDATE albums SET name = $1, year = $2 WHERE id = $3 RETURNING id",

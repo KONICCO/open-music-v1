@@ -1,3 +1,4 @@
+
 const ClientError = require("../../exceptions/ClientError");
 
 class AlbumsHandler {
@@ -58,7 +59,7 @@ class AlbumsHandler {
   async getAlbumByIdHandler(request, h) {
     try {
       const { id } = request.params;
-      const album = await this._service.getAlbumById(id);
+      const album = await this._service.getAlbumsById(id);
       return {
         status: 'success',
         data: {
