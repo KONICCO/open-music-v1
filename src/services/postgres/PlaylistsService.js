@@ -49,10 +49,10 @@ class PlaylistsService {
     return result.rows;
   }
 
-  async deletePlaylistById(playlist_id) {
+  async deletePlaylistById(playlistId) {
     const query = {
       text: "DELETE FROM playlists WHERE id = $1 RETURNING id",
-      values: [playlist_id],
+      values: [playlistId],
     };
 
     const result = await this._pool.query(query);
@@ -62,16 +62,15 @@ class PlaylistsService {
     }
   }
 
-  async addPlaylistSongs(playlist_id, song_id) {
-    const id = `playlistSongs-${nanoid(16)}`;
+  async addPlaylistSongs(playlistId, songId) {
+    const id = `playlistsongs-${nanoid(16)}`;
 
     const query = {
       text: "INSERT INTO playlist_songs VALUES($1, $2, $3) RETURNING id",
-      values: [id, playlist_id, song_id],
+      values: [id, playlistId, songId],
     };
 
     const result = await this._pool.query(query);
-    console.log("result", result);
     if (!result.rowCount) {
       throw new InvariantError("Gagal menambahkan lagu ke playlist.");
     }
@@ -79,13 +78,13 @@ class PlaylistsService {
     return result.rows[0].id;
   }
 
-  async getPlaylistById(playlist_id) {
+  async getPlaylistById(playlistId) {
     const query = {
       text: `SELECT playlists.id AS id, playlists.name, users.username
       FROM playlists
       LEFT JOIN users ON playlists.owner = users.id
       WHERE playlists.id = $1`,
-      values: [playlist_id],
+      values: [playlistId],
     };
 
     const result = await this._pool.query(query);
@@ -95,14 +94,14 @@ class PlaylistsService {
     return result.rows[0];
   }
 
-  async getPlaylistSongs(playlist_id) {
+  async getPlaylistSongs(playlistId) {
     const query = {
       text: `SELECT songs.id AS id, songs.title, songs.performer
       FROM songs
       FULL JOIN playlist_songs ON playlist_songs.song_id = songs.id
       FULL JOIN playlists ON playlists.id = playlist_songs.playlist_id
       WHERE playlist_songs.playlist_id = $1`,
-      values: [playlist_id],
+      values: [playlistId],
     };
 
     const result = await this._pool.query(query);
@@ -112,10 +111,10 @@ class PlaylistsService {
     return result.rows;
   }
 
-  async deletePlaylistSongs(playlist_id, song_id) {
+  async deletePlaylistSongs(playlistId, songId) {
     const query = {
       text: "DELETE FROM playlist_songs WHERE playlist_id = $1 AND song_id = $2 RETURNING id",
-      values: [playlist_id, song_id],
+      values: [playlistId, songId],
     };
 
     const result = await this._pool.query(query);
@@ -147,17 +146,17 @@ class PlaylistsService {
     }
   }
 
-  async verifyPlaylistAccess(id, owner) {
+  async verifyPlaylistAccess(id, ownerId) {
     // console.log("verifyPlaylistOwner", id, owner);
     try {
-      await this.verifyPlaylistOwner(id, owner);
+      await this.verifyPlaylistOwner(id, ownerId);
     } catch (error) {
       if (error instanceof NotFoundError) {
         throw error;
       }
       try {
         // console.log("verifyColabolator", id, owner);
-        await this.verifyCollaborator(id, owner);
+        await this.verifyCollaborator(id, ownerId);
       } catch {
         throw error;
       }
